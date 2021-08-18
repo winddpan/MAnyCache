@@ -7,12 +7,14 @@
 
 import Foundation
 
-public final class Entity {
-    public internal(set) var object: CacheSerializable
-    public internal(set) var expiry: Expiry
+final class Entity {
+    var object: CacheSerializable
+    var expiry: Expiry
+    var cost: Int
 
-    init(object: CacheSerializable, expiry: Expiry) {
+    init(object: CacheSerializable, cost: Int, expiry: Expiry) {
         self.object = object
+        self.cost = cost
         self.expiry = expiry
     }
 }

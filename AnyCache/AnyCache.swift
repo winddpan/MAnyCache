@@ -8,9 +8,9 @@
 import Foundation
 
 open class AnyCache {
-    let memoryStorage: MemoryStorage
-    let diskStorage: DiskStorage
-    let ioQueue = DispatchQueue(label: "com.anyCache.ioQueue")
+    private let memoryStorage: MemoryStorage
+    private let diskStorage: DiskStorage
+    private let trimQueue = DispatchQueue(label: "com.anyCache.trimQueue")
     open var autoTrimInterval: TimeInterval = 60
 
     public init(name: String,
@@ -28,9 +28,7 @@ open class AnyCache {
 
     open func removeAll() {
         memoryStorage.removeAll()
-        ioQueue.async {
-            self.diskStorage.removeAll()
-        }
+        diskStorage.removeAll()
     }
 
     open func removeObject(forKey key: String) {
@@ -39,53 +37,50 @@ open class AnyCache {
     }
 
     open func object<T: CacheSerializable>(forKey key: String, as type: T.Type, completion: @escaping (Result<T, Error>) -> Void) {
-        ioQueue.async {
+        if let entity = memoryStorage.entity(forKey: key) {
             do {
-                let object = try self.object(forKey: key, as: type)
+                let object = try loadEntity(key: key, entity: entity, as: type)
                 completion(.success(object))
             } catch {
                 completion(.failure(error))
+            }
+        } else {
+            diskStorage.entity(forKey: key) { [weak self] entity in
+                guard let self = self else { return }
+                if let entity = entity {
+                    do {
+                        let object = try self.loadEntity(key: key, entity: entity, as: type)
+                        try? self.memoryStorage.setEntity(entity, forKey: key)
+                        completion(.success(object))
+                    } catch {
+                        completion(.failure(error))
+                    }
+                } else {
+                    completion(.failure(StorageError.notFound))
+                }
             }
         }
     }
 
     open func object<T: CacheSerializable>(forKey key: String, as type: T.Type) throws -> T {
-        do {
-            let entity = try memoryStorage.storageEntity(forKey: key, as: type)
-            // as! always succeed
-            return entity.object as! T
-        } catch {
-            switch error {
-            case StorageError.isExpired:
-                memoryStorage.removeEntity(forKey: key)
-                diskStorage.removeEntity(forKey: key)
-            case StorageError.notFound:
-                break
-            default:
-                throw error
-            }
+        if let entity = memoryStorage.entity(forKey: key) {
+            return try loadEntity(key: key, entity: entity, as: T.self)
+        } else if let entity = diskStorage.entity(forKey: key) {
+            try? memoryStorage.setEntity(entity, forKey: key)
+            return try loadEntity(key: key, entity: entity, as: T.self)
         }
-
-        do {
-            let entity = try diskStorage.storageEntity(forKey: key, as: type)
-            _ = try memoryStorage.setEntity(entity, forKey: key, cost: .unknow)
-            // as! always succeed
-            return entity.object as! T
-        } catch {
-            if case .isExpired = error as? StorageError {
-                diskStorage.removeEntity(forKey: key)
-            }
-            throw error
-        }
+        throw StorageError.notFound
     }
 
     open func setObject<T: CacheSerializable>(_ object: T, forKey key: String, expiry: Expiry = .never) throws {
-        let entity = Entity(object: object, expiry: expiry)
-        let cost = try diskStorage.setEntity(entity, forKey: key, cost: .unknow)
-        _ = try memoryStorage.setEntity(entity, forKey: key, cost: .bytes(cost))
+        let entity = Entity(object: object, cost: 0, expiry: expiry)
+        try diskStorage.setEntity(entity, forKey: key)
+        try memoryStorage.setEntity(entity, forKey: key)
 
-        memoryStorage.removeAllExpires()
-        diskStorage.removeAllExpires()
+        trimQueue.asyncDeduped(target: self, after: 0.1) { [weak self] in
+            self?.memoryStorage.removeAllExpires()
+            self?.diskStorage.removeAllExpires()
+        }
     }
 
     open func containsObject(forKey key: String) -> Bool {
@@ -93,53 +88,44 @@ open class AnyCache {
     }
 
     open func setObject<T: Codable>(_ object: T, forKey key: String, expiry: Expiry = .never) throws {
-        try setObject(CodableWrapper(object), forKey: key, expiry: expiry)
+        try setObject(CodableContainer(object), forKey: key, expiry: expiry)
     }
 
     open func object<T: Codable>(forKey key: String, as type: T.Type, completion: @escaping (Result<T, Error>) -> Void) {
-        return object(forKey: key, as: CodableWrapper<T>.self, completion: { result in
-            switch result {
-            case let .success(wrapper):
-                completion(.success(wrapper.object))
-            case let .failure(error):
-                completion(.failure(error))
-            }
+        return object(forKey: key, as: CodableContainer<T>.self, completion: { result in
+            completion(result.map { $0.object })
         })
     }
 
     open func object<T: Codable>(forKey key: String, as type: T.Type) throws -> T {
-        return try object(forKey: key, as: CodableWrapper<T>.self).object
+        return try object(forKey: key, as: CodableContainer<T>.self).object
     }
 }
 
 private extension AnyCache {
     func _trimRecursively() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + autoTrimInterval) { [weak self] in
+        trimQueue.asyncAfter(deadline: .now() + autoTrimInterval) { [weak self] in
             guard let self = self else { return }
-            self.ioQueue.async {
-                self.memoryStorage.removeAllExpires()
-                self.diskStorage.removeAllExpires()
-            }
+            self.memoryStorage.removeAllExpires()
+            self.diskStorage.removeAllExpires()
             self._trimRecursively()
         }
     }
-}
 
-private extension StorageProtocol {
-    func storageEntity<T: CacheSerializable>(forKey key: String, as type: T.Type) throws -> Entity {
-        guard let entity = entity(forKey: key) else {
-            throw StorageError.notFound
-        }
-        guard !entity.expiry.isExpired else {
-            removeEntity(forKey: key)
+    func loadEntity<T: CacheSerializable>(key: String, entity: Entity, as type: T.Type) throws -> T {
+        if entity.expiry.isExpired {
+            memoryStorage.removeEntity(forKey: key)
+            diskStorage.removeEntity(forKey: key)
             throw StorageError.isExpired
+        } else {
+            if let obj = entity.object as? T {
+                return obj
+            }
+            let data = try entity.object.serialize()
+            let newObj = try T.deserialize(from: data)
+            entity.object = newObj
+            entity.cost = data.count
+            return newObj
         }
-        if entity.object is T {
-            return entity
-        }
-        let data = try entity.object.serialize()
-        let newObj = try T.deserialize(from: data)
-        entity.object = newObj
-        return entity
     }
 }

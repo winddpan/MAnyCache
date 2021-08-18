@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		400BF55326CBB55900EEEDE2 /* OIP-C.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 400BF55226CBB55900EEEDE2 /* OIP-C.jpeg */; };
+		404449EE26CCAE9F00B575C5 /* DispatchQueue+Dedupe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 404449ED26CCAE9F00B575C5 /* DispatchQueue+Dedupe.swift */; };
 		40B7964326C662DC00FBFCAE /* AnyCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 40B7964126C662DC00FBFCAE /* AnyCache.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		40B7964A26C6630C00FBFCAE /* AnyCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40B7964926C6630C00FBFCAE /* AnyCache.swift */; };
 		40B7964E26C6655C00FBFCAE /* Expiry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40B7964D26C6655C00FBFCAE /* Expiry.swift */; };
@@ -25,7 +26,7 @@
 		40B7968E26C6804800FBFCAE /* AnyCache.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 40B7963E26C662DC00FBFCAE /* AnyCache.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		40DFBD0C26CA134D00C9F0AB /* StorageError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DFBD0B26CA134D00C9F0AB /* StorageError.swift */; };
 		40DFBD0E26CA343C00C9F0AB /* Entity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DFBD0D26CA343C00C9F0AB /* Entity.swift */; };
-		40DFBD1026CA48D600C9F0AB /* CodableWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DFBD0F26CA48D600C9F0AB /* CodableWrapper.swift */; };
+		40DFBD1026CA48D600C9F0AB /* CodableContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DFBD0F26CA48D600C9F0AB /* CodableContainer.swift */; };
 		40DFBD1326CA550E00C9F0AB /* StorageProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DFBD1226CA550E00C9F0AB /* StorageProtocol.swift */; };
 		40DFBD1B26CA67E300C9F0AB /* StringBase64.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DFBD1A26CA67E300C9F0AB /* StringBase64.swift */; };
 /* End PBXBuildFile section */
@@ -56,6 +57,7 @@
 
 /* Begin PBXFileReference section */
 		400BF55226CBB55900EEEDE2 /* OIP-C.jpeg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "OIP-C.jpeg"; sourceTree = "<group>"; };
+		404449ED26CCAE9F00B575C5 /* DispatchQueue+Dedupe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DispatchQueue+Dedupe.swift"; path = "../../../../Documents/DispatchQueue+Dedupe.swift"; sourceTree = "<group>"; };
 		40B7963E26C662DC00FBFCAE /* AnyCache.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AnyCache.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		40B7964126C662DC00FBFCAE /* AnyCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnyCache.h; sourceTree = "<group>"; };
 		40B7964226C662DC00FBFCAE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -75,7 +77,7 @@
 		40B7968926C6804300FBFCAE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		40DFBD0B26CA134D00C9F0AB /* StorageError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageError.swift; sourceTree = "<group>"; };
 		40DFBD0D26CA343C00C9F0AB /* Entity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Entity.swift; sourceTree = "<group>"; };
-		40DFBD0F26CA48D600C9F0AB /* CodableWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodableWrapper.swift; sourceTree = "<group>"; };
+		40DFBD0F26CA48D600C9F0AB /* CodableContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodableContainer.swift; sourceTree = "<group>"; };
 		40DFBD1226CA550E00C9F0AB /* StorageProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProtocol.swift; sourceTree = "<group>"; };
 		40DFBD1A26CA67E300C9F0AB /* StringBase64.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringBase64.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -121,15 +123,15 @@
 		40B7964026C662DC00FBFCAE /* AnyCache */ = {
 			isa = PBXGroup;
 			children = (
-				40DFBD1726CA67A100C9F0AB /* Extension */,
 				40B7964126C662DC00FBFCAE /* AnyCache.h */,
 				40B7964226C662DC00FBFCAE /* Info.plist */,
 				40B7964926C6630C00FBFCAE /* AnyCache.swift */,
-				40B7964D26C6655C00FBFCAE /* Expiry.swift */,
-				40DFBD1126CA54FC00C9F0AB /* Storage */,
-				40DFBD1626CA613100C9F0AB /* CacheSerializable */,
-				40DFBD0B26CA134D00C9F0AB /* StorageError.swift */,
 				40DFBD0D26CA343C00C9F0AB /* Entity.swift */,
+				40B7964D26C6655C00FBFCAE /* Expiry.swift */,
+				40DFBD0B26CA134D00C9F0AB /* StorageError.swift */,
+				40DFBD1626CA613100C9F0AB /* CacheSerializable */,
+				40DFBD1726CA67A100C9F0AB /* Helper */,
+				40DFBD1126CA54FC00C9F0AB /* Storage */,
 			);
 			path = AnyCache;
 			sourceTree = "<group>";
@@ -171,17 +173,18 @@
 			children = (
 				40B7965326C6683C00FBFCAE /* CacheSerializable.swift */,
 				40B7965526C6697100FBFCAE /* BuildInCacheSerializable.swift */,
-				40DFBD0F26CA48D600C9F0AB /* CodableWrapper.swift */,
+				40DFBD0F26CA48D600C9F0AB /* CodableContainer.swift */,
 			);
 			path = CacheSerializable;
 			sourceTree = "<group>";
 		};
-		40DFBD1726CA67A100C9F0AB /* Extension */ = {
+		40DFBD1726CA67A100C9F0AB /* Helper */ = {
 			isa = PBXGroup;
 			children = (
 				40DFBD1A26CA67E300C9F0AB /* StringBase64.swift */,
+				404449ED26CCAE9F00B575C5 /* DispatchQueue+Dedupe.swift */,
 			);
-			path = Extension;
+			path = Helper;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -303,11 +306,12 @@
 				40B7964A26C6630C00FBFCAE /* AnyCache.swift in Sources */,
 				40DFBD0C26CA134D00C9F0AB /* StorageError.swift in Sources */,
 				40DFBD0E26CA343C00C9F0AB /* Entity.swift in Sources */,
+				404449EE26CCAE9F00B575C5 /* DispatchQueue+Dedupe.swift in Sources */,
 				40B7965226C6674100FBFCAE /* DiskStorage.swift in Sources */,
 				40B7965426C6683C00FBFCAE /* CacheSerializable.swift in Sources */,
 				40DFBD1326CA550E00C9F0AB /* StorageProtocol.swift in Sources */,
 				40DFBD1B26CA67E300C9F0AB /* StringBase64.swift in Sources */,
-				40DFBD1026CA48D600C9F0AB /* CodableWrapper.swift in Sources */,
+				40DFBD1026CA48D600C9F0AB /* CodableContainer.swift in Sources */,
 				40B7964E26C6655C00FBFCAE /* Expiry.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

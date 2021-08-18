@@ -8,8 +8,7 @@ public enum Expiry {
     public var date: Date {
         switch self {
         case .never:
-            // Ref: http://lists.apple.com/archives/cocoa-dev/2005/Apr/msg01833.html
-            return Date(timeIntervalSince1970: 60 * 60 * 24 * 365 * 68)
+            return Date(timeIntervalSince1970: TimeInterval(Int32.max))
         case .seconds(let seconds):
             return Date().addingTimeInterval(seconds)
         case .date(let date):
@@ -22,7 +21,7 @@ public enum Expiry {
     }
 
     init(from date: Date) {
-        if date == Date(timeIntervalSince1970: 60 * 60 * 24 * 365 * 68) {
+        if date == Date(timeIntervalSince1970: TimeInterval(Int32.max)) {
             self = .never
         } else {
             self = .date(date)

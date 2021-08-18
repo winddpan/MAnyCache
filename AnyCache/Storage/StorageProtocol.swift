@@ -7,19 +7,6 @@
 
 import Foundation
 
-enum StorageCost {
-    case bytes(Int)
-    case unknow
-    
-    var cost: Int {
-        switch self {
-        case .bytes(let value):
-            return value
-        case .unknow:
-            return 0
-        }
-    }
-}
 
 protocol StorageProtocol {
     func removeAll()
@@ -30,7 +17,7 @@ protocol StorageProtocol {
 
     func entity(forKey key: String) -> Entity?
 
-    func setEntity(_ entity: Entity, forKey key: String, cost: StorageCost) throws -> Int
+    func setEntity(_ entity: Entity, forKey key: String) throws
 
     func containsEntity(forKey key: String) -> Bool
 }

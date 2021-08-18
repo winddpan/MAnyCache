@@ -1,5 +1,5 @@
 //
-//  CodableWrapper.swift
+//  CodableContainer.swift
 //  AnyCache
 //
 //  Created by PAN on 2021/8/16.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct CodableWrapper<T: Codable>: CacheSerializable {
+struct CodableContainer<T: Codable>: CacheSerializable {
     let object: T
 
     init(_ object: T) {
@@ -18,8 +18,8 @@ struct CodableWrapper<T: Codable>: CacheSerializable {
         return try JSONEncoder().encode(object)
     }
 
-    static func deserialize(from data: Data) throws -> CodableWrapper<T> {
+    static func deserialize(from data: Data) throws -> CodableContainer<T> {
         let object = try JSONDecoder().decode(T.self, from: data)
-        return CodableWrapper(object)
+        return CodableContainer(object)
     }
 }

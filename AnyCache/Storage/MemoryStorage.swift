@@ -6,7 +6,6 @@
 //
 
 import Foundation
-
 #if canImport(UIKit)
     import UIKit
 #endif
@@ -37,11 +36,12 @@ final class MemoryStorage {
         cache.totalCostLimit = config.byteLimit
 
         #if canImport(UIKit)
-            NotificationCenter.default.addObserver(self, selector: #selector(_onMemoryWarning), name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(_autoCleanup), name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(_autoCleanup), name: UIApplication.didEnterBackgroundNotification, object: nil)
         #endif
     }
 
-    @objc private func _onMemoryWarning() {
+    @objc private func _autoCleanup() {
         removeAll()
     }
 }
@@ -62,19 +62,18 @@ extension MemoryStorage: StorageProtocol {
         return cache.object(forKey: key as NSString)
     }
 
-    func setEntity(_ entity: Entity, forKey key: String, cost: StorageCost) throws -> Int {
+    func setEntity(_ entity: Entity, forKey key: String) throws {
         lock.lock(); defer { lock.unlock() }
-        cache.setObject(entity, forKey: key as NSString, cost: cost.cost)
-        return cost.cost
+        cache.setObject(entity, forKey: key as NSString, cost: entity.cost)
     }
 
     func containsEntity(forKey key: String) -> Bool {
         lock.lock(); defer { lock.unlock() }
-        return cache.object(forKey: key as NSString) != nil
+        if let entity = cache.object(forKey: key as NSString), !entity.expiry.isExpired {
+            return true
+        }
+        return false
     }
 
-    func removeAllExpires() {
-        lock.lock(); defer { lock.unlock() }
-        
-    }
+    func removeAllExpires() {}
 }

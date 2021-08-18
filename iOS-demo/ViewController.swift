@@ -14,26 +14,35 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-//        for i in 0 ..< 100 {
-//            try? self.cache.setObject("\(i)\(i)\(i)\(i)\(i)\(i)", forKey: "\(i)")
-//        }
-//
-//        try? self.cache.setObject(UIImage.init(named: "OIP-C.jpeg")!, forKey: "image")
-//        let image = try? self.cache.object(forKey: "image", as: UIImage.self)
-//
-        
+        print(self.cache.allKeys)
+
+        let image = try? self.cache.object(forKey: "image", as: UIImage.self)
+        print(image)
+
+        for i in 0 ..< 100 {
+            try? self.cache.setObject("\(i)\(i)\(i)\(i)\(i)\(i)", forKey: "\(i)")
+        }
+
+        try? self.cache.setObject(UIImage(named: "OIP-C.jpeg")!, forKey: "image")
+
         do {
-            let image = try self.cache.object(forKey: "image", as: Data.self)
+            let image = try self.cache.object(forKey: "image", as: UIImage.self)
             print(image)
 
-        } catch  {
+        } catch {
             print(error)
         }
 
-        
         print(self.cache.allKeys)
 
-        
-        
+        for i in 0 ..< 99 {
+            self.cache.removeObject(forKey: "\(i)")
+        }
+
+        print(self.cache.allKeys)
+        print(self.cache.containsObject(forKey: "image"))
+
+        self.cache.removeAll()
+        print(self.cache.allKeys)
     }
 }
