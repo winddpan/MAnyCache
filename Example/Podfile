@@ -1,6 +1,0 @@
-use_frameworks!
-target 'MAnyCache_Tests' do
-  pod 'MAnyCache', :path => '../'
-  
-  
-end
