@@ -28,7 +28,7 @@ AnyCache
 
   s.ios.deployment_target = '9.0'
 
-  s.source_files = 'AnyCache/**/*'
+  s.source_files = 'Sources/**/*'
   
   # s.public_header_files = 'Pod/Classes/**/*.h'
 end
