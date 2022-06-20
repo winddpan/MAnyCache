@@ -11,6 +11,7 @@ open class AnyCache {
     private let memoryStorage: MemoryStorage
     private let diskStorage: DiskStorage
     private let trimQueue = DispatchQueue(label: "com.anyCache.trimQueue")
+    private let debouncer = Debouncer(seconds: 0.1)
     open var autoTrimInterval: TimeInterval = 60
 
     public init(name: String,
@@ -77,9 +78,11 @@ open class AnyCache {
         try diskStorage.setEntity(entity, forKey: key)
         try memoryStorage.setEntity(entity, forKey: key)
 
-        trimQueue.asyncDeduped(target: self, after: 0.1) { [weak self] in
-            self?.memoryStorage.removeAllExpires()
-            self?.diskStorage.removeAllExpires()
+        debouncer.debounce { [weak self] in
+            self?.trimQueue.async { [weak self] in
+                self?.memoryStorage.removeAllExpires()
+                self?.diskStorage.removeAllExpires()
+            }
         }
     }
 

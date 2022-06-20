@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import UIKit
 
 extension Optional: CacheSerializable where Wrapped: CacheSerializable {
     public func serialize() throws -> Data {
@@ -34,6 +33,8 @@ extension Data: CacheSerializable {
     }
 }
 
+#if os(iOS)
+import UIKit
 extension UIImage: CacheSerializable {
     public func serialize() throws -> Data {
         if let data = pngData() {
@@ -49,12 +50,13 @@ extension UIImage: CacheSerializable {
         throw CacheSerializableError.deserializeFailure
     }
 }
+#endif
 
 /* NSFoundation -- */
 
 extension NSString: CacheSerializable {
     public func serialize() throws -> Data {
-        if let data = self.data(using: String.Encoding.utf8.rawValue) {
+        if let data = data(using: String.Encoding.utf8.rawValue) {
             return data
         }
         throw CacheSerializableError.serializeFailure
