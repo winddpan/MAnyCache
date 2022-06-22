@@ -11,14 +11,21 @@ public struct DiskStorageConfig {
     public let fileManager: FileManager
     public let countLimit: Int
     public let byteLimit: Int
+    public let directory: String
 
-    public init(fileManager: FileManager = .default, countLimit: Int, byteLimit: Int) {
+    public init(fileManager: FileManager = .default, directory: String? = nil, countLimit: Int, byteLimit: Int) {
         self.fileManager = fileManager
         self.countLimit = countLimit
         self.byteLimit = byteLimit
+        if let directory = directory {
+            self.directory = directory
+        } else {
+            let cachesDirectory = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true).first!
+            self.directory = (cachesDirectory as NSString).appendingPathComponent("AnyCache")
+        }
     }
 
-    public static let `default` = DiskStorageConfig(fileManager: .default, countLimit: Int.max, byteLimit: Int.max)
+    public static let `default` = DiskStorageConfig(countLimit: Int.max, byteLimit: Int.max)
 }
 
 final class DiskStorage {
@@ -30,8 +37,7 @@ final class DiskStorage {
     private let ioQueue = DispatchQueue(label: "com.anyCache.ioQueue")
 
     private lazy var directory: String = {
-        let dstPath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true).first!
-        return (dstPath as NSString).appendingPathComponent("AnyCache/\(name)")
+        (config.directory as NSString).appendingPathComponent(name)
     }()
 
     init(name: String, config: DiskStorageConfig) {
@@ -39,12 +45,6 @@ final class DiskStorage {
         self.config = config
         self.fileManager = config.fileManager
         self.manifest = readFiles()
-    }
-
-    private func fileUrl(_ key: String) -> URL {
-        let filename = key.toBase64String()
-        let path = (directory as NSString).appendingPathComponent(filename)
-        return URL(fileURLWithPath: path, isDirectory: false)
     }
 
     private func createDirectory() throws {
@@ -133,7 +133,11 @@ extension DiskStorage: StorageProtocol {
 
     func setEntity(_ entity: Entity, forKey key: String) throws {
         lock.lock(); defer { lock.unlock() }
-        let url = fileUrl(key)
+        let fileExtension = (key as NSString).pathExtension
+        let filename = UUID().uuidString.lowercased().replacingOccurrences(of: "-", with: "") + "\(fileExtension.isEmpty ? "" : ".\(fileExtension)")"
+        let path = (directory as NSString).appendingPathComponent(filename)
+        let url = URL(fileURLWithPath: path, isDirectory: false)
+
         let data = try entity.object.serialize()
         let createDate = Date()
         try createDirectory()
@@ -143,7 +147,8 @@ extension DiskStorage: StorageProtocol {
 
         ioQueue.async {
             let attributes = [FileAttributeKey.fileExtendedAttributes: ["expire": "\(entity.expiry.date.timeIntervalSince1970)".data(using: .utf8)!,
-                                                                        "create": "\(createDate.timeIntervalSince1970)".data(using: .utf8)!]]
+                                                                        "create": "\(createDate.timeIntervalSince1970)".data(using: .utf8)!,
+                                                                        "key": key.data(using: .utf8)!]]
             _ = self.fileManager.createFile(atPath: url.path, contents: data, attributes: nil)
             try? self.fileManager.setAttributes(attributes, ofItemAtPath: url.path)
         }
@@ -245,15 +250,16 @@ private struct ResourceObject {
     }
 
     init?(url: URL, fileManager: FileManager) {
-        guard let name = url.lastPathComponent.fromBase64String(),
-              let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+        guard let attributes = try? fileManager.attributesOfItem(atPath: url.path),
               let size = attributes[.size] as? Int,
               let fileExtendedAttributes = attributes[.fileExtendedAttributes],
               let attributes = fileExtendedAttributes as? [String: Any],
               let __expire = attributes["expire"] as? Data,
               let __create = attributes["create"] as? Data,
+              let __name = attributes["key"] as? Data,
               let _expire = String(data: __expire, encoding: .utf8),
               let _create = String(data: __create, encoding: .utf8),
+              let name = String(data: __name, encoding: .utf8),
               let expire = TimeInterval(_expire),
               let create = TimeInterval(_create)
         else {
