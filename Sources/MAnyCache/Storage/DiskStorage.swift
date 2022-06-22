@@ -110,7 +110,7 @@ extension DiskStorage: StorageProtocol {
             return nil
         }
         if let data = fileManager.contents(atPath: resouceObject.url.path) {
-            return Entity(object: data, cost: data.count, expiry: Expiry(from: resouceObject.expire))
+            return Entity(object: data, filePath: resouceObject.url, cost: data.count, expiry: Expiry(from: resouceObject.expire))
         }
         return nil
     }
@@ -123,7 +123,7 @@ extension DiskStorage: StorageProtocol {
         }
         ioQueue.async {
             if let data = self.fileManager.contents(atPath: resouceObject.url.path) {
-                let entity = Entity(object: data, cost: data.count, expiry: Expiry(from: resouceObject.expire))
+                let entity = Entity(object: data, filePath: resouceObject.url, cost: data.count, expiry: Expiry(from: resouceObject.expire))
                 completion(entity)
             } else {
                 completion(nil)
@@ -147,7 +147,8 @@ extension DiskStorage: StorageProtocol {
             _ = self.fileManager.createFile(atPath: url.path, contents: data, attributes: nil)
             try? self.fileManager.setAttributes(attributes, ofItemAtPath: url.path)
         }
-        entity.cost = data.count
+        entity.updateProperty(key: \.cost, value: data.count)
+        entity.updateProperty(key: \.filePath, value: url)
     }
 
     func containsEntity(forKey key: String) -> Bool {

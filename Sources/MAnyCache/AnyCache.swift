@@ -63,6 +63,26 @@ open class AnyCache {
         }
     }
 
+    open func entity(forKey key: String) throws -> Entity {
+        var entity: Entity?
+        if let _entity = memoryStorage.entity(forKey: key) {
+            entity = _entity
+        } else if let _entity = diskStorage.entity(forKey: key) {
+            try? memoryStorage.setEntity(_entity, forKey: key)
+            entity = _entity
+        }
+        if entity?.expiry.isExpired == true {
+            memoryStorage.removeEntity(forKey: key)
+            diskStorage.removeEntity(forKey: key)
+            throw StorageError.isExpired
+        }
+        if let entity = entity {
+            return entity
+        } else {
+            throw StorageError.notFound
+        }
+    }
+
     open func object<T: CacheSerializable>(forKey key: String, as type: T.Type) throws -> T {
         if let entity = memoryStorage.entity(forKey: key) {
             return try loadEntity(key: key, entity: entity, as: T.self)
@@ -74,7 +94,7 @@ open class AnyCache {
     }
 
     open func setObject<T: CacheSerializable>(_ object: T, forKey key: String, expiry: Expiry = .never) throws {
-        let entity = Entity(object: object, cost: 0, expiry: expiry)
+        let entity = Entity(object: object, filePath: URL(fileURLWithPath: ""), cost: 0, expiry: expiry)
         try diskStorage.setEntity(entity, forKey: key)
         try memoryStorage.setEntity(entity, forKey: key)
 
@@ -126,8 +146,8 @@ private extension AnyCache {
             }
             let data = try entity.object.serialize()
             let newObj = try T.deserialize(from: data)
-            entity.object = newObj
-            entity.cost = data.count
+            entity.updateProperty(key: \.object, value: newObj)
+            entity.updateProperty(key: \.cost, value: data.count)
             return newObj
         }
     }
