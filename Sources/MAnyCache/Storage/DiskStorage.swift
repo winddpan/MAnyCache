@@ -79,7 +79,7 @@ final class DiskStorage {
     }
 }
 
-extension DiskStorage: StorageProtocol {
+extension DiskStorage {
     var allKeys: [String] {
         lock.lock(); defer { lock.unlock() }
         return manifest.map { $0.key }
@@ -124,14 +124,18 @@ extension DiskStorage: StorageProtocol {
         ioQueue.async {
             if let data = self.fileManager.contents(atPath: resouceObject.url.path) {
                 let entity = Entity(object: data, filePath: resouceObject.url, cost: data.count, expiry: Expiry(from: resouceObject.expire))
-                completion(entity)
+                DispatchQueue.main.async {
+                    completion(entity)
+                }
             } else {
-                completion(nil)
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
             }
         }
     }
 
-    func setEntity(_ entity: Entity, forKey key: String) throws {
+    func setEntity(_ entity: Entity, forKey key: String, completion: (() -> Void)?) throws {
         lock.lock(); defer { lock.unlock() }
         let fileExtension = (key as NSString).pathExtension
         let filename = UUID().uuidString.lowercased().replacingOccurrences(of: "-", with: "") + "\(fileExtension.isEmpty ? "" : ".\(fileExtension)")"
@@ -151,6 +155,10 @@ extension DiskStorage: StorageProtocol {
                                                                         "key": key.data(using: .utf8)!]]
             _ = self.fileManager.createFile(atPath: url.path, contents: data, attributes: nil)
             try? self.fileManager.setAttributes(attributes, ofItemAtPath: url.path)
+
+            DispatchQueue.main.async {
+                completion?()
+            }
         }
         entity.updateProperty(key: \.cost, value: data.count)
         entity.updateProperty(key: \.filePath, value: url)

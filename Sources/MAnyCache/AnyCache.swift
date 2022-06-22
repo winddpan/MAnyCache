@@ -93,10 +93,10 @@ open class AnyCache {
         throw StorageError.notFound
     }
 
-    open func setObject<T: CacheSerializable>(_ object: T, forKey key: String, expiry: Expiry = .never) throws {
+    open func setObject<T: CacheSerializable>(_ object: T, forKey key: String, expiry: Expiry = .never, diskStorageCompletion: (() -> Void)? = nil) throws {
         let entity = Entity(object: object, filePath: URL(fileURLWithPath: ""), cost: 0, expiry: expiry)
-        try diskStorage.setEntity(entity, forKey: key)
         try memoryStorage.setEntity(entity, forKey: key)
+        try diskStorage.setEntity(entity, forKey: key, completion: diskStorageCompletion)
 
         debouncer.debounce { [weak self] in
             self?.trimQueue.async { [weak self] in

@@ -46,7 +46,7 @@ final class MemoryStorage {
     }
 }
 
-extension MemoryStorage: StorageProtocol {
+extension MemoryStorage {
     func removeAll() {
         lock.lock(); defer { lock.unlock() }
         cache.removeAllObjects()
@@ -64,6 +64,7 @@ extension MemoryStorage: StorageProtocol {
 
     func setEntity(_ entity: Entity, forKey key: String) throws {
         lock.lock(); defer { lock.unlock() }
+        guard cache.countLimit > 0, cache.totalCostLimit > 0 else { return }
         cache.setObject(entity, forKey: key as NSString, cost: entity.cost)
     }
 
