@@ -37,6 +37,30 @@ open class AnyCache {
         diskStorage.removeEntity(forKey: key)
     }
 
+    open func entity(forKey key: String) throws -> Entity {
+        var entity: Entity?
+        if let _entity = memoryStorage.entity(forKey: key) {
+            entity = _entity
+        } else if let _entity = diskStorage.entity(forKey: key) {
+            try? memoryStorage.setEntity(_entity, forKey: key)
+            entity = _entity
+        }
+        if entity?.expiry.isExpired == true {
+            memoryStorage.removeEntity(forKey: key)
+            diskStorage.removeEntity(forKey: key)
+            throw StorageError.isExpired
+        }
+        if let entity = entity {
+            return entity
+        } else {
+            throw StorageError.notFound
+        }
+    }
+
+    open func containsObject(forKey key: String) -> Bool {
+        return memoryStorage.containsEntity(forKey: key) || diskStorage.containsEntity(forKey: key)
+    }
+
     open func object<T: CacheSerializable>(forKey key: String, as type: T.Type, completion: @escaping (Result<T, Error>) -> Void) {
         if let entity = memoryStorage.entity(forKey: key) {
             do {
@@ -63,27 +87,7 @@ open class AnyCache {
         }
     }
 
-    open func entity(forKey key: String) throws -> Entity {
-        var entity: Entity?
-        if let _entity = memoryStorage.entity(forKey: key) {
-            entity = _entity
-        } else if let _entity = diskStorage.entity(forKey: key) {
-            try? memoryStorage.setEntity(_entity, forKey: key)
-            entity = _entity
-        }
-        if entity?.expiry.isExpired == true {
-            memoryStorage.removeEntity(forKey: key)
-            diskStorage.removeEntity(forKey: key)
-            throw StorageError.isExpired
-        }
-        if let entity = entity {
-            return entity
-        } else {
-            throw StorageError.notFound
-        }
-    }
-
-    open func object<T: CacheSerializable>(forKey key: String, as type: T.Type) throws -> T {
+    private func _serializableObject<T: CacheSerializable>(forKey key: String, as type: T.Type) throws -> T {
         if let entity = memoryStorage.entity(forKey: key) {
             return try loadEntity(key: key, entity: entity, as: T.self)
         } else if let entity = diskStorage.entity(forKey: key) {
@@ -93,7 +97,19 @@ open class AnyCache {
         throw StorageError.notFound
     }
 
-    open func setObject<T: CacheSerializable>(_ object: T, forKey key: String, expiry: Expiry = .never, diskStorageCompletion: (() -> Void)? = nil) throws {
+    open func object<T: CacheSerializable>(forKey key: String, as type: T.Type) throws -> T {
+        return try _serializableObject(forKey: key, as: type)
+    }
+
+    open func object<T: CacheSerializable & Codable>(forKey key: String, as type: T.Type) throws -> T {
+        return try _serializableObject(forKey: key, as: type)
+    }
+
+    open func object<T: Codable>(forKey key: String, as type: T.Type) throws -> T {
+        return try _serializableObject(forKey: key, as: CodableContainer<T>.self).object
+    }
+
+    private func _setSerializable<T: CacheSerializable>(_ object: T, forKey key: String, expiry: Expiry = .never, diskStorageCompletion: (() -> Void)? = nil) throws {
         let entity = Entity(object: object, filePath: URL(fileURLWithPath: ""), cost: 0, expiry: expiry)
         try memoryStorage.setEntity(entity, forKey: key)
         try diskStorage.setEntity(entity, forKey: key, completion: diskStorageCompletion)
@@ -106,22 +122,16 @@ open class AnyCache {
         }
     }
 
-    open func containsObject(forKey key: String) -> Bool {
-        return memoryStorage.containsEntity(forKey: key) || diskStorage.containsEntity(forKey: key)
+    open func setObject<T: CacheSerializable>(_ object: T, forKey key: String, expiry: Expiry = .never, diskStorageCompletion: (() -> Void)? = nil) throws {
+        try _setSerializable(object, forKey: key, expiry: expiry, diskStorageCompletion: diskStorageCompletion)
     }
 
-    open func setObject<T: Codable>(_ object: T, forKey key: String, expiry: Expiry = .never) throws {
-        try setObject(CodableContainer(object), forKey: key, expiry: expiry)
+    open func setObject<T: CacheSerializable & Codable>(_ object: T, forKey key: String, expiry: Expiry = .never, diskStorageCompletion: (() -> Void)? = nil) throws {
+        try _setSerializable(object, forKey: key, expiry: expiry, diskStorageCompletion: diskStorageCompletion)
     }
 
-    open func object<T: Codable>(forKey key: String, as type: T.Type, completion: @escaping (Result<T, Error>) -> Void) {
-        return object(forKey: key, as: CodableContainer<T>.self, completion: { result in
-            completion(result.map { $0.object })
-        })
-    }
-
-    open func object<T: Codable>(forKey key: String, as type: T.Type) throws -> T {
-        return try object(forKey: key, as: CodableContainer<T>.self).object
+    open func setObject<T: Codable>(_ object: T, forKey key: String, expiry: Expiry = .never, diskStorageCompletion: (() -> Void)? = nil) throws {
+        try _setSerializable(CodableContainer(object), forKey: key, expiry: expiry, diskStorageCompletion: diskStorageCompletion)
     }
 }
 
