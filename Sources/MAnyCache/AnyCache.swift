@@ -110,6 +110,11 @@ open class AnyCache {
     }
 
     private func _setSerializable<T: CacheSerializable>(_ object: T, forKey key: String, expiry: Expiry = .never, diskStorageCompletion: (() -> Void)? = nil) throws {
+        if unwrap(object) is NSNull {
+            removeObject(forKey: key)
+            return
+        }
+
         let entity = Entity(object: object, filePath: URL(fileURLWithPath: ""), cost: 0, expiry: expiry)
         try memoryStorage.setEntity(entity, forKey: key)
         try diskStorage.setEntity(entity, forKey: key, completion: diskStorageCompletion)
@@ -131,6 +136,11 @@ open class AnyCache {
     }
 
     open func setObject<T: Codable>(_ object: T, forKey key: String, expiry: Expiry = .never, diskStorageCompletion: (() -> Void)? = nil) throws {
+        if unwrap(object) is NSNull {
+            removeObject(forKey: key)
+            return
+        }
+
         try _setSerializable(CodableContainer(object), forKey: key, expiry: expiry, diskStorageCompletion: diskStorageCompletion)
     }
 }
@@ -161,4 +171,14 @@ private extension AnyCache {
             return newObj
         }
     }
+}
+
+private func unwrap(_ any: Any) -> Any {
+    let mi = Mirror(reflecting: any)
+    if mi.displayStyle != .optional {
+        return any
+    }
+    if mi.children.isEmpty { return NSNull() }
+    let (_, some) = mi.children.first!
+    return some
 }

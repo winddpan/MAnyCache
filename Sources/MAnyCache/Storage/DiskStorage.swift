@@ -136,6 +136,8 @@ extension DiskStorage {
     }
 
     func setEntity(_ entity: Entity, forKey key: String, completion: (() -> Void)?) throws {
+        removeEntity(forKey: key)
+
         lock.lock(); defer { lock.unlock() }
         let fileExtension = (key as NSString).pathExtension
         let filename = UUID().uuidString.lowercased().replacingOccurrences(of: "-", with: "") + "\(fileExtension.isEmpty ? "" : ".\(fileExtension)")"
