@@ -35,6 +35,9 @@ extension Data: CacheSerializable {
 
 #if os(iOS)
 import UIKit
+
+private let imageScale = UIScreen.main.scale
+
 extension UIImage: CacheSerializable {
     public func serialize() throws -> Data {
         if let data = pngData() {
@@ -44,7 +47,7 @@ extension UIImage: CacheSerializable {
     }
 
     public static func deserialize(from data: Data) throws -> Self {
-        if let image = Self(data: data) {
+        if let image = Self(data: data, scale: imageScale) {
             return image
         }
         throw CacheSerializableError.deserializeFailure
